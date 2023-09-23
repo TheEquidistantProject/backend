@@ -2,14 +2,15 @@ import redis
 import json
 import random
 import datetime
+from redis.commands.json.path import Path
 
 db_client = redis.Redis(host='localhost', port=6379, db=0)
 
 
 class metadata:
-    def __init__(self, name="", authors=[], tags=[], date="", popularity=0, image=""):
-        self.name = name
-        self.authors = authors
+    def __init__(self, name="", sources="", tags="", date="", popularity=0, image=""):
+        self.title = name
+        self.sources = sources
         self.tags = tags
         self.date = date
         self.popularity = popularity
@@ -17,12 +18,15 @@ class metadata:
 
 
 class payload:
-    def __init__(self, metadata=metadata(), body=""):
+    def __init__(self, id=-1, metadata=metadata(), body=""):
+        self.id = id
         self.metadata = metadata
         self.body = body
 
     def to_dict(self):
-        return {"metadata": self.metadata.__dict__, "body": self.body}
+        d = self.metadata.__dict__
+        d.update({"id": self.id, "body": self.body})
+        return d
 
 
 def gen_word(len):
@@ -41,12 +45,12 @@ def gen_name():
     return name[:-1]
 
 
-def choose_author():
-    authors = ["CNN", "FOX", "MSNBC", "ABC", "BBC"]
+def choose_source():
+    sources = ["CNN", "FOX", "MSNBC", "ABC", "BBC"]
     ret = set()
-    num_authors = random.randint(1, len(authors))
-    for _ in range(num_authors):
-        ret.add(random.choice(authors))
+    num_sources = random.randint(1, len(sources))
+    for _ in range(num_sources):
+        ret.add(random.choice(sources))
 
     return list(ret)
 
@@ -83,17 +87,30 @@ def gen_body():
     return "\n\r".join(paragraphs)
 
 
-def gen_payload():
+def gen_payload(id):
     name = gen_name()
-    author = choose_author()
-    tags = gen_tags()
+    source = ",".join(choose_source())
+    tags = ",".join(gen_tags())
     date = gen_date()
     popularity = random.randint(0, 100)
     image = ""
     body = gen_body()
-    return payload(metadata(name, author, tags, date, popularity, image), body).to_dict()
+    return payload(id, metadata(name, source, tags, date, popularity, image), body).to_dict()
 
 
-for i in range(1, 31):
-    db_client.set(i, json.dumps(gen_payload()))
-    print(gen_payload())
+a = {
+    "sources": "",
+    "tags": "",
+    "id": "",
+    "title": "",
+    "image": "",
+    "date": "",
+    "body": "",
+    "popularity": 0
+}
+
+db_client.json().set("-1", Path.root_path(), a)
+
+for i in range(1, 3):
+    db_client.json().set(f"{i}", Path.root_path(), gen_payload(i))
+    # print(gen_payload())

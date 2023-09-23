@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import redis
-from redisearch import TextField, TagField, NumericField, Query, IndexDefinition, IndexType
+from redisearch import TextField, TagField, NumericField, Query, IndexDefinition
 import uvicorn
 import json
 
@@ -37,7 +37,7 @@ schema = (
 
 db_index = db_client.ft("idx:articles")
 db_index.create_index(schema, definition=IndexDefinition(
-    prefix=["article:"], index_type=IndexType.JSON))
+    prefix=["article:"]))
 
 server_data = ServerData(app, db_client, db_index)
 
