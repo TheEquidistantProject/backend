@@ -2,12 +2,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import redis
 import uvicorn
+import json
 
 
 class ServerData:
-    def __init__(self, app, db):
+    def __init__(self, app, db_client):
         self.app = app
-        self.db = db
+        self.db_client = db_client
 
 
 app = FastAPI()
@@ -19,19 +20,18 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-pool = redis.ConnectionPool(host='localhost', port=6379, db=0)
-db = redis.Redis(connection_pool=pool)
+db_client = redis.Redis(host='localhost', port=6379, db=0)
 
-server_data = ServerData(app, db)
+server_data = ServerData(app, db_client)
 
 
 @server_data.on_event("startup")
-async def startup_event():
+def startup_event():
     pass
 
 
 @server_data.on_event("shutdown")
-async def shutdown_event():
+def shutdown_event():
     pass
 
 
@@ -41,19 +41,22 @@ def root():
 
 
 @server_data.app.get('/api/articles')
-def articles(page: int = 1):
-    return None
+def list_articles(page: int = 1):
+    articles = [{} for _ in range(10)]
+    return json.dumps(articles)
 
 
 @server_data.app.get('/api/articles/{id}')
-def articles(id: int):
-    return None
+def show_article(id: int):
+    article = server_data.db_client.get(id)
+    return json.dumps(article)
 
 
 @server_data.app.get('/api/search')
-def articles(q: str):
-    return None
+def search_articles(q: str):
+    articles = []
+    return json.dumps(articles)
 
 
 if __name__ == '__main__':
-    uvicorn.run(app, host='0.0.0.0')
+    uvicorn.run(app, host='0.0.0.0', port=8000)
