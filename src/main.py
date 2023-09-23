@@ -27,7 +27,7 @@ class ServerData:
         a["id"] = article["_id"]
         a["images"] = article["urlToImage"]
         a["body"] = article["news_article"]
-        a["popularity"] = random.randint(-30, 70)
+        a["popularity"] = (random.randint(-3000, 7000))/100
         return a
 
     @staticmethod
