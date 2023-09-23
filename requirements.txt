@@ -1,4 +1,6 @@
 "fastapi[all]"
 aiohttp
 redis
+rejson
+redisearch
 json
