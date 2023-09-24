@@ -11,7 +11,7 @@ class ServerData:
     def __init__(self, app, db_client):
         self.app = app
         self.db_client = db_client
-        self.db_table = db_client["news"]["Articles"]
+        self.db_table = db_client["db"]["Articles"]
         self.articles = self.db_table.find()
 
     def refresh_articles(self):
@@ -24,15 +24,16 @@ class ServerData:
         a["date"] = article["date"]
         a["tags"] = list(
             map(lambda x: x.strip(), article["hashtags"].strip().split(',')))
-        a["id"] = article["_id"]
+        a["id"] = str(article["_id"])
         a["images"] = article["urlToImage"]
         a["body"] = article["news_article"]
-        a["popularity"] = (random.randint(-3000, 7000))/100
+        test = (hash(article["title"])%40)*(hash(article["title"])/abs(hash(article["title"])))
+        a["popularity"] = test
         return a
 
     @staticmethod
     def map_without_body(article: dict):
-        a = article.copy()
+        a = server_data.map_with_body(article.copy())
         a['body'] = None
         return a
 
@@ -46,21 +47,10 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-uri = "mongodb+srv://muthu:adi123@cluster0.rgzozbh.mongodb.net/?retryWrites=true&w=majority"
+uri = "mongodb+srv://whyy:why_not@cluster0.m0qxirb.mongodb.net/?retryWrites=true&w=majority"
 db_client = MongoClient(uri)
 
 server_data = ServerData(app, db_client)
-
-
-@server_data.on_event("startup")
-def startup_event():
-    pass
-
-
-@server_data.on_event("shutdown")
-def shutdown_event():
-    pass
-
 
 @server_data.app.get('/')
 def root():
@@ -69,17 +59,26 @@ def root():
 
 @server_data.app.get('/api/articles')
 def list_articles(page: int = 1):
+    random.seed(42)
     server_data.refresh_articles()
-    articles = server_data.articles[(page-1)*10: 10*page]
+    # articles = server_data.articles[(page-1)*10: 10*page]
+    cpy = list(server_data.articles).copy()
+    articles = [cpy.pop(random.randint(0, len(cpy) - 1)) for _ in range(len(cpy))]
     articles = list(map(server_data.map_without_body, articles))
-    return json.dumps(articles)
+    return {"data": articles}
 
 
 @server_data.app.get('/api/articles/{id}')
 def show_article(id: str):
+    random.seed(42)
     article = list(map(server_data.map_with_body,
-                       server_data.db_table.find(ObjectId(id))))
-    return json.dumps(article)
+                       server_data.db_table.find({"_id":ObjectId(id)})))
+    return {"data": article}
+
+@server_data.app.get('/api/ids')
+def ids():
+    document_ids = [str(document['_id']) for document in db_client["db"]["Articles"].find({}, projection={'_id': 1})]
+    return {"data": document_ids}
 
 
 if __name__ == '__main__':
